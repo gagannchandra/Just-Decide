@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Decide — Themed Wheel</title>
+  <meta name="description" content="Themed decision wheel with many visual themes: forest, woods, ocean, work, office, home, relationship." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --w:420px;
+      --transition: 360ms cubic-bezier(.2,.9,.3,1);
+      /* default (dark) */
+      --bg-top:#071124; --bg-bottom:#0f1724; --panel-grad:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      --muted:#94a3b8; --accent:#7c3aed; --text:#ffffff; --card-border:rgba(255,255,255,0.04);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom));color:var(--text);display:flex;align-items:center;justify-content:center;padding:22px;transition:background var(--transition)}
+
+    .site{width:100%;max-width:1200px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .wrap{display:grid;grid-template-columns:1fr 540px;gap:20px}
+    .panel{background:var(--panel-grad);padding:16px;border-radius:14px;border:1px solid var(--card-border);box-shadow:0 10px 30px rgba(2,6,23,0.45);transition:background var(--transition), color var(--transition)}
+
+    .controls{display:flex;gap:8px;margin-bottom:12px}
+    .controls input[type=text]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)}
+    .btn{padding:10px 12px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent),#4f46e5);color:white;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+
+    .list{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow:auto}
+    .list .row{display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02)}
+    .row .text{flex:1}
+    .row button{background:transparent;border:0;color:var(--muted);cursor:pointer}
+
+    /* wheel area */
+    .wheel-area{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .wheel-frame{width:var(--w);height:var(--w);position:relative}
+    .pointer{position:absolute;top:-24px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:28px solid var(--text);filter:drop-shadow(0 6px 18px rgba(0,0,0,0.5));z-index:60}
+    svg#wheelSvg{width:100%;height:100%;display:block;border-radius:50%;overflow:visible;filter:drop-shadow(0 10px 30px rgba(2,6,23,0.5))}
+    .centerBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;width:130px;height:130px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.2));border:6px solid rgba(255,255,255,0.08);font-weight:800;cursor:pointer;transition:transform 220ms ease, box-shadow 220ms ease}
+    .centerBtn:hover{transform:translate(-50%,-50%) scale(1.03);box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+    .centerBtn small{display:block;color:var(--muted);font-size:12px}
+
+    .result{font-weight:800;color:var(--accent);text-align:center}
+
+    .footer-controls{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .themeSelect{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;color:var(--text)}
+
+    /* theme preview chips */
+    .theme-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .theme-chip{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.03);cursor:pointer;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:8px}
+
+    @media (max-width:980px){ .wrap{grid-template-columns:1fr} :root{--w:360px} }
+  </style>
+</head>
+<body>
+  <div class="site">
+    <header>
+      <div>
+        <h1>Decide</h1>
+        <p class="lead">Pick something quickly — now with many themed looks (Forest / Ocean / Office / Home / Relationship / Woods / Work).</p>
+      </div>
+      <div style="margin-left:auto" class="small">Autosave · Shareable · Themed</div>
+    </header>
+
+    <main class="wrap">
+      <section class="panel" id="leftPanel">
+        <div class="controls">
+          <input id="optionInput" placeholder="Add an option and press Enter" />
+          <button id="addBtn" class="btn">Add</button>
+          <button id="presetBtn" class="btn ghost">Presets</button>
+        </div>
+
+        <div class="list" id="optionsList" aria-label="options"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <div class="small">Count: <span id="count">0</span></div>
+          <div class="footer-controls">
+            <button id="shuffleBtn" class="btn ghost">Shuffle</button>
+            <button id="shareBtn" class="btn ghost">Share</button>
+            <select id="theme" class="themeSelect">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="pastel">Pastel</option>
+              <option value="forest">Forest</option>
+              <option value="woods">Woods</option>
+              <option value="ocean">Ocean</option>
+              <option value="work">Work</option>
+              <option value="office">Office</option>
+              <option value="home">Home</option>
+              <option value="relationship">Relationship</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="theme-grid" id="themeGrid" aria-hidden="true">
+          <!-- visual quick theme chips added by JS -->
+        </div>
+      </section>
+
+      <aside class="panel wheel-area" id="rightPanel">
+        <div class="wheel-frame">
+          <div class="pointer" aria-hidden="true"></div>
+          <svg id="wheelSvg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="centerBtn" id="spinBtn">Spin <small>or click wheel</small></div>
+        </div>
+        <div class="result" id="resultText">No selection yet</div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // Decide — enhanced themes (fixed: single loadState/saveState and single state declaration)
+    (function(){
+      const OPTION_KEY = 'decide_v3';
+      const THEME_KEY = 'decide_theme_v1';
+      const svg = document.getElementById('wheelSvg');
+      const optionInput = document.getElementById('optionInput');
+      const addBtn = document.getElementById('addBtn');
+      const optionsList = document.getElementById('optionsList');
+      const count = document.getElementById('count');
+      const spinBtn = document.getElementById('spinBtn');
+      const resultText = document.getElementById('resultText');
+      const shuffleBtn = document.getElementById('shuffleBtn');
+      const presetBtn = document.getElementById('presetBtn');
+      const shareBtn = document.getElementById('shareBtn');
+      const themeSelect = document.getElementById('theme');
+      const themeGrid = document.getElementById('themeGrid');
+
+      // default presets
+      const PRESETS = {
+        snacks: ['Cupcakes','Cookies','Brownie','Candy','Chocolate','Donuts'],
+        chores: ['Dishes','Laundry','Vacuum','Trash','Cook','Groceries'],
+        smallchoices: ['Yes','No']
+      };
+
+      // Theme palettes & backgrounds
+      const THEMES = {
+        dark: {
+          bgTop:'#071124', bgBottom:'#0f1724', panel: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))', text:'#ffffff', muted:'#94a3b8', accent:'#7c3aed', wheelColors:['#c2410c','#b91c1c','#10b981','#f97316','#b45309','#be185d','#047857','#f43f5e']
+        },
+        light:{ bgTop:'#f6f7fb', bgBottom:'#f6f7fb', panel:'linear-gradient(180deg,#ffffff,#f8fafc)', text:'#0b1220', muted:'#6b7280', accent:'#2563eb', wheelColors:['#f97316','#ef4444','#f59e0b','#f97316','#60a5fa','#34d399','#a78bfa','#fb7185'] },
+        pastel:{ bgTop:'#fffaf6', bgBottom:'#fff7ed', panel:'linear-gradient(180deg,#fff7ed,#fff1f2)', text:'#2b2b2b', muted:'#6b6b6b', accent:'#f472b6', wheelColors:['#fda4af','#fde68a','#bbf7d0','#bfdbfe','#f5d0fe','#ffd6a5'] },
+        forest:{ bgTop:'#0b2f1a', bgBottom:'#072614', panel:'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06))', text:'#e6f7ee', muted:'#a7c8b7', accent:'#22c55e', wheelColors:['#14532d','#166534','#16a34a','#22c55e','#4ade80','#15803d'] },
+        woods:{ bgTop:'#2b1608', bgBottom:'#0f0a03', panel:'linear-gradient(180deg,#2b1608,#23120a)', text:'#fdebd3', muted:'#c7a78b', accent:'#b45309', wheelColors:['#7c2d12','#a0522d','#b45309','#92400e','#d97706','#92400e'] },
+        ocean:{ bgTop:'#012233', bgBottom:'#012f4a', panel:'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))', text:'#e6faff', muted:'#94c7d9', accent:'#06b6d4', wheelColors:['#0369a1','#0ea5b7','#06b6d4','#0891b2','#7dd3fc','#38bdf8'] },
+        work:{ bgTop:'#0b1320', bgBottom:'#0b1530', panel:'linear-gradient(180deg,#0f1724,#071124)', text:'#e6eef8', muted:'#9aa7c7', accent:'#06b6d4', wheelColors:['#334155','#475569','#0ea5a4','#06b6d4','#2563eb','#7c3aed'] },
+        office:{ bgTop:'#f3f4f6', bgBottom:'#e6eef8', panel:'linear-gradient(180deg,#ffffff,#f2f7fb)', text:'#0b1220', muted:'#556175', accent:'#2563eb', wheelColors:['#0ea5a4','#2563eb','#06b6d4','#1e293b','#64748b','#0ea5a4'] },
+        home:{ bgTop:'#fff7ed', bgBottom:'#fff1e6', panel:'linear-gradient(180deg,#fffaf0,#fff3e8)', text:'#2b2b2b', muted:'#7c6b5e', accent:'#f59e0b', wheelColors:['#f97316','#f59e0b','#fbbf24','#fef3c7','#fb923c'] },
+        relationship:{ bgTop:'#2b0633', bgBottom:'#3b0250', panel:'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06))', text:'#ffeef8', muted:'#f5c9e6', accent:'#ec4899', wheelColors:['#db2777','#ec4899','#f472b6','#f0abfc','#fb7185'] }
+      };
+
+      // single pair of load/save functions
+      function loadState(){
+        try{
+          const params = new URLSearchParams(window.location.search);
+          if(params.has('o')){
+            const arr = JSON.parse(decodeURIComponent(params.get('o')));
+            return {options:arr, angle:0, theme:'dark'};
+          }
+          const raw = localStorage.getItem(OPTION_KEY);
+          const rawTheme = localStorage.getItem(THEME_KEY);
+          const obj = raw?JSON.parse(raw):{options:['Cupcakes','Bracelet','Cookies','Phone Case','Candy','Tea Mug','Chocolates','Pendant','Brownie','Keychain'], angle:0, theme:'dark'};
+          obj.theme = rawTheme || obj.theme || 'dark';
+          return obj;
+        }catch(e){
+          return {options:[],angle:0,theme:'dark'};
+        }
+      }
+
+      function saveState(){
+        try{
+          localStorage.setItem(OPTION_KEY, JSON.stringify(state));
+          localStorage.setItem(THEME_KEY, state.theme);
+        }catch(e){}
+      }
+
+      // single state declaration
+      let state = loadState();
+      let angle = state.angle || 0; // degrees
+      let spinning = false;
+
+      // render list
+      function renderList(){
+        optionsList.innerHTML='';
+        state.options.forEach((o,idx)=>{
+          const row = document.createElement('div'); row.className='row';
+          const txt = document.createElement('div'); txt.className='text'; txt.textContent = o; txt.title='Double-click to edit';
+          txt.addEventListener('dblclick', ()=>{ const nv = prompt('Edit option', o); if(nv!==null && nv.trim()){ state.options[idx] = nv.trim(); draw(); saveState(); renderList(); }});
+          const up = document.createElement('button'); up.textContent='▲'; up.title='Move up'; up.addEventListener('click', ()=>{ if(idx>0){ [state.options[idx-1], state.options[idx]] = [state.options[idx], state.options[idx-1]]; saveState(); renderList(); draw(); }});
+          const down = document.createElement('button'); down.textContent='▼'; down.title='Move down'; down.addEventListener('click', ()=>{ if(idx<state.options.length-1){ [state.options[idx+1],state.options[idx]]=[state.options[idx],state.options[idx+1]]; saveState(); renderList(); draw(); }});
+          const del = document.createElement('button'); del.textContent='✖'; del.title='Delete'; del.addEventListener('click', ()=>{ state.options.splice(idx,1); saveState(); renderList(); draw(); });
+          row.appendChild(txt); row.appendChild(up); row.appendChild(down); row.appendChild(del);
+          optionsList.appendChild(row);
+        });
+        count.textContent = state.options.length;
+      }
+
+      function addOption(v){ if(!v) return; state.options.push(v); saveState(); renderList(); draw(); }
+      addBtn.addEventListener('click', ()=>{ addOption(optionInput.value.trim()); optionInput.value=''; optionInput.focus(); });
+      optionInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ addOption(optionInput.value.trim()); optionInput.value=''; } });
+
+      // draw wheel using SVG — use theme palette
+      function draw(){
+        const opts = state.options; const n = opts.length; svg.innerHTML = ''; if(n===0) return; const center = 250; const r = 240; const innerR = 110; const theme = THEMES[state.theme] || THEMES.dark; const colors = theme.wheelColors; const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('id','wheelGroup');
+        for(let i=0;i<n;i++){
+          const start = (i*(2*Math.PI)/n) - Math.PI/2;
+          const end = ((i+1)*(2*Math.PI)/n) - Math.PI/2;
+          const x1 = center + r * Math.cos(start); const y1 = center + r * Math.sin(start);
+          const x2 = center + r * Math.cos(end); const y2 = center + r * Math.sin(end);
+          const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+          const d = `M ${center} ${center} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+          path.setAttribute('d', d);
+          path.setAttribute('fill', colors[i%colors.length]);
+          path.setAttribute('stroke', '#ffffffcc'); path.setAttribute('stroke-width','2');
+          g.appendChild(path);
+
+          // label
+          const angleMid = (start + end)/2; const tx = center + (r*0.62) * Math.cos(angleMid); const ty = center + (r*0.62) * Math.sin(angleMid);
+          const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+          text.setAttribute('x', tx); text.setAttribute('y', ty);
+          text.setAttribute('fill','#ffffff'); text.setAttribute('font-size','15'); text.setAttribute('font-weight','700');
+          text.setAttribute('text-anchor','middle');
+          text.setAttribute('transform', `rotate(${(angleMid*180/Math.PI)} ${tx} ${ty})`);
+          text.textContent = opts[i];
+          g.appendChild(text);
+        }
+        const hole = document.createElementNS('http://www.w3.org/2000/svg','circle'); hole.setAttribute('cx',center); hole.setAttribute('cy',center); hole.setAttribute('r', innerR); hole.setAttribute('fill','rgba(0,0,0,0.35)'); hole.setAttribute('stroke','#ffffff10'); hole.setAttribute('stroke-width','2');
+        g.appendChild(hole);
+        svg.appendChild(g);
+        g.setAttribute('transform', `rotate(${angle} ${center} ${center})`);
+        // update surrounding styles (background/panel colors)
+        applyThemeStyles(state.theme);
+      }
+
+      // spinning
+      function spin(){ if(spinning) return; if(state.options.length===0){ alert('Add options to spin'); return; } spinning = true; resultText.textContent = 'Spinning...'; const n = state.options.length; const spins = Math.floor(Math.random()*4)+6; const pick = Math.floor(Math.random()*n); const slice = 360/n; const target = 360*spins + (90 - (pick*slice) - slice/2) + (Math.random()*slice - slice/2); const start = performance.now(); const duration = 1800; const from = angle; function animate(t){ const p = Math.min(1, (t-start)/duration); const eased = 1 - Math.pow(1-p,3); angle = from + (target - from)*eased; const g = document.getElementById('wheelGroup'); if(g) g.setAttribute('transform', `rotate(${angle} 250 250)`); if(p<1) requestAnimationFrame(animate); else { spinning=false; const chosen = state.options[pick]; resultText.textContent = chosen; state.angle = angle % 360; saveState(); // small pop animation
+            const centerBtn = document.getElementById('spinBtn'); centerBtn.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.06)'},{transform:'translate(-50%,-50%) scale(1)'}], {duration:600,easing:'cubic-bezier(.2,.9,.3,1)'}); } } requestAnimationFrame(animate); }
+
+      // share
+      function share(){ const data = encodeURIComponent(JSON.stringify(state.options)); const url = new URL(window.location.href); url.searchParams.set('o', data); navigator.clipboard.writeText(url.toString()).then(()=>{ alert('Share link copied to clipboard'); }).catch(()=>{ prompt('Copy this link', url.toString()); }); }
+
+      // presets
+      presetBtn.addEventListener('click', ()=>{ const k = prompt('Choose preset: snacks, chores, smallchoices','snacks'); if(k && PRESETS[k]){ state.options = PRESETS[k].slice(); saveState(); renderList(); draw(); } });
+      shuffleBtn.addEventListener('click', ()=>{ for(let i=state.options.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [state.options[i],state.options[j]]=[state.options[j],state.options[i]]; } saveState(); renderList(); draw(); });
+      shareBtn.addEventListener('click', share);
+
+      // theme selection
+      function applyThemeStyles(t){ const theme = THEMES[t] || THEMES.dark; document.documentElement.style.setProperty('--bg-top', theme.bgTop); document.documentElement.style.setProperty('--bg-bottom', theme.bgBottom); document.documentElement.style.setProperty('--panel-grad', theme.panel); document.documentElement.style.setProperty('--muted', theme.muted); document.documentElement.style.setProperty('--accent', theme.accent); document.documentElement.style.setProperty('--text', theme.text); document.documentElement.style.setProperty('--card-border', 'rgba(255,255,255,0.06)'); // tweak panel border
+        // highlight spin button color
+        const centerBtn = document.querySelector('.centerBtn'); if(centerBtn) centerBtn.style.borderColor = theme.text + '66'; // subtle
+      }
+
+      // theme select hookup & chips
+      function populateThemeChips(){ themeGrid.innerHTML=''; Object.keys(THEMES).forEach(t=>{ const chip = document.createElement('div'); chip.className='theme-chip'; chip.textContent = t.charAt(0).toUpperCase() + t.slice(1); chip.addEventListener('click', ()=>{ state.theme = t; themeSelect.value = t; applyThemeStyles(t); saveState(); draw(); }); // small swatch
+          const sw = document.createElement('div'); sw.style.width='24px'; sw.style.height='12px'; sw.style.borderRadius='6px'; sw.style.marginLeft='8px'; sw.style.display='inline-block'; const colors = THEMES[t].wheelColors; sw.style.background = `linear-gradient(90deg, ${colors.slice(0,5).join(',')})`; chip.appendChild(sw); themeGrid.appendChild(chip); }); }
+
+      themeSelect.addEventListener('change', ()=>{ state.theme = themeSelect.value; applyThemeStyles(state.theme); saveState(); draw(); });
+
+      // initial
+      renderList(); draw(); populateThemeChips(); // apply saved or default theme
+      if(!state.theme) state.theme = 'dark'; themeSelect.value = state.theme; applyThemeStyles(state.theme);
+
+      // spin button hookup
+      spinBtn.addEventListener('click', spin); svg.addEventListener('click', spin);
+
+      // keyboard shortcuts
+      window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ e.preventDefault(); spin(); } if(e.key==='Delete'){ if(state.options.length && confirm('Remove last option?')){ state.options.pop(); saveState(); renderList(); draw(); } } });
+
+    })();
+  </script>
+</body>
+</html>
